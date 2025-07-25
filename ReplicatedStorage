@@ -1,0 +1,20 @@
+-- ItemDataModule.lua
+-- アイテムのデータ定義
+
+local ItemData = {
+	HealthPotion = {
+		Name = "回復ポーション",
+		Description = "体力を50回復する。",
+		Type = "Heal",
+		Amount = 50
+	},
+	SpeedBoots = {
+		Name = "スピードブーツ",
+		Description = "5秒間スピードが上昇する。",
+		Type = "Speed",
+		Amount = 8,
+		Duration = 5
+	}
+}
+
+return ItemData
