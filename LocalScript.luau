@@ -1,57 +1,57 @@
---[[
-    📂 Script: Inventory UI Generator
-    🎮 場所: StarterPlayer > StarterPlayerScripts（LocalScript）
-    📋 概要: インベントリUI内のアイテムボタンを生成し、クリックで使用処理をサーバーへ送信
---]]
-
--- サービス取得
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- プレイヤー情報とGUIへのアクセス
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local inventoryUI = playerGui:WaitForChild("InventoryUI")
 local scrollingFrame = inventoryUI:WaitForChild("Frame"):WaitForChild("ScrollingFrame")
 
--- アイテム情報を格納したModuleScriptを取得
 local ItemData = require(ReplicatedStorage:WaitForChild("ItemDataModule"))
-
--- サーバーへ「アイテム使ったよ！」と伝えるイベント
 local UseItemEvent = ReplicatedStorage:WaitForChild("UseItemEvent")
 
--- 🧪 仮インベントリ（あとでサーバーから取得されるように変更予定）
-local Inventory = {
-	["HealthPotion"] = 2,
-	["SpeedBoots"] = 1,
-}
+local Inventory = {} -- クライアント側の所持数
 
--- 📛 既存のボタンをすべて削除（UI更新時にリセットするため）
-for _, child in pairs(scrollingFrame:GetChildren()) do
-	if child:IsA("TextButton") then
-		child:Destroy()
+local function updateInventoryUI(inv)
+	-- 既存のボタン全部削除
+	for _, child in pairs(scrollingFrame:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+
+	-- UI再構築
+	for itemName, count in pairs(inv) do
+		local data = ItemData[itemName]
+		if data then
+			local button = Instance.new("TextButton")
+			button.Size = UDim2.new(1, 0, 0, 40)
+			button.BackgroundColor3 = Color3.fromRGB(60, 140, 180)
+			button.TextColor3 = Color3.fromRGB(255, 255, 255)
+			button.Text = data.Name .. " x" .. count
+			button.Font = Enum.Font.GothamBold
+			button.TextSize = 18
+			button.Parent = scrollingFrame
+
+			button.MouseButton1Click:Connect(function()
+				print("使う: " .. itemName)
+				local newInventory = UseItemEvent:InvokeServer(itemName)
+				if newInventory then
+					Inventory = newInventory
+					updateInventoryUI(Inventory)
+				end
+			end)
+		end
 	end
 end
 
--- 🔁 インベントリ内のアイテム分、ボタンを生成
-for itemName, count in pairs(Inventory) do
-	local data = ItemData[itemName]
-
-	if data then
-		-- 🎨 ボタン生成とデザイン設定
-		local button = Instance.new("TextButton")
-		button.Size = UDim2.new(1, 0, 0, 40)
-		button.BackgroundColor3 = Color3.fromRGB(60, 140, 180)
-		button.TextColor3 = Color3.fromRGB(255, 255, 255)
-		button.Text = data.Name .. " x" .. count
-		button.Font = Enum.Font.GothamBold
-		button.TextSize = 18
-		button.Parent = scrollingFrame
-
-		-- 🖱️ ボタンクリックで使用イベント発火
-		button.MouseButton1Click:Connect(function()
-			print("使う: " .. itemName)
-			UseItemEvent:FireServer(itemName)
-		end)
+-- 最初に初期表示（サーバーから在庫もらう想定）
+local function initializeInventory()
+	local newInventory = UseItemEvent:InvokeServer("") -- 空文字などで初期データ要求
+	if newInventory then
+		Inventory = newInventory
+		updateInventoryUI(Inventory)
 	end
 end
+
+initializeInventory()
+
